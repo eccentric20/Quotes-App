@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Page</title>
+    <link rel="stylesheet" href="/edit.css">
+</head>
+<body>
+    <% if(!locals.quote){ %>
+        <h1>New Quote</h1>
+        <div id="new-quote">
+            <form action="/api/quotes" method="post">
+    
+                <textarea id="quo" type="text" name="quote" placeholder="Quote" required></textarea>
+        
+                <input id="author" type="text" name="author" placeholder="Author's name" required>
+                <button id="new-but" type="submit">Create Quote</button>
+            </form>
+        </div> 
+    <% } else{%>
+        <h1>Edit Quote</h1>
+        <div id="edit-quote">
+            <form action="/api/quotes/<%- quote.id %>" method="post">
+    
+                <input id="quo" type="text" name="quote" value="<%- quote.quote %>">
+                
+                <input id="author" type="text" name="author" value="<%- quote.person %>">
+                <button id="new-but" type="submit">Edit Quote</button>
+            </form>
+        </div>
+    <% } %> 
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quotes App</title>
+    <link rel="stylesheet" href="/index.css">
+</head>
+<body>
+    <h1>Quotes</h1>
+    <a href="/new" id="newQuoteBtn">New Quote</a>
+    <div class="quotes-cont">
+        <% for(let i=0;i<quotes.length;i += 2){ %>
+            <div class="quote-r">
+                <div class="cont">
+                    <div class="quote-b" style="background-image: url('<%- quotes[i].imageUrl %>');">
+                        <div class="quote"><%- quotes[i].quote %></div>
+                        <div class="author">- <%- quotes[i].person %></div>
+
+                    </div>
+                    <div class="buttons">
+                        <form class="form-edit" method="get" action="/edit/<%= quotes[i].id %>">
+                            <button class="but-edit" type="submit">Edit</button>
+                        </form>
+                        <form class="form-delete" action="/api/quotes/delete/<%- quotes[i].id %>" method="get" >
+                            <button class="but-del" type="submit">Delete</button>
+                        </form>
+                    </div>
+                </div>
+
+                
+
+                <% if(i+1<quotes.length){ %>
+                    <div class="cont">
+                        <div class="quote-b" style="background-image: url('<%- quotes[i+1].imageUrl %>');">
+                            <div class="quote"><%- quotes[i+1].quote %></div>
+                            <div class="author">- <%- quotes[i+1].person %></div>
+                        </div>
+                        <div class="buttons">
+                            <form class="form-edit" method="get" action="/edit/<%= quotes[i+1].id %>">
+                                <button class="but-edit" type="submit">Edit</button>
+                            </form>
+                            <form class="form-delete" action="/api/quotes/delete/<%- quotes[i+1].id %>" method="get" >
+                                <button class="but-del" type="submit">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+
+                <% } %>
+            </div>
+        <% } %>
+    </div>
+</body>
+</html>
