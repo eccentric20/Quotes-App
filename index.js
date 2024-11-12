@@ -1,8 +1,12 @@
-import express from "express"
-import bodyParser from "body-parser"
+import express from "express";
+import bodyParser from "body-parser";
+import axios from "axios";
+import path from "path";
 
 const app = express();
-const port = 4000;
+const port = 4000; // Choose a single port for both the API and the frontend
+const API_URL = `http://localhost:${port}`;
+const key = "LQjp5EKc1ZW9eCbx9RjcZTm3WYBo7M6gvmuf83J4Dpbuk0WYWdlf8pcu";
 
 let quotes = [
     {
@@ -77,65 +81,99 @@ let quotes = [
     }
 ]
 
-let lastId = 10;
 
-app.use(bodyParser.urlencoded({extended: true}));
+let lastId = quotes.length;
+
+// Middleware for parsing requests
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
+app.use(express.static("public"));
 
-app.get("/quotes", (req, res) => {
-    console.log(quotes);
-    res.json(quotes);
-});
+// Set up view engine
+app.set("view engine", "ejs");
+// app.set("views", path.join(__dirname, "views"));
 
+// API ROUTES
+app.get("/quotes", (req, res) => res.json(quotes));
 app.get("/quotes/:id", (req, res) => {
     const quote = quotes.find((q) => q.id === parseInt(req.params.id));
-    if(!quote) return res.status(404).json({message: "Quote not found"});
+    if (!quote) return res.status(404).json({ message: "Quote not found" });
     res.json(quote);
-
+});
+app.post("/quotes", (req, res) => {
+    if (!req.body.quote || !req.body.author) return res.status(400).json({ message: "Quote and author are required" });
+    const newId = ++lastId;
+    const quote = { id: newId, quote: req.body.quote, person: req.body.author };
+    quotes.push(quote);
+    res.json(quote);
+});
+app.patch("/quotes/:id", (req, res) => {
+    const findQuote = quotes.find((q) => q.id === parseInt(req.params.id));
+    if (!findQuote) return res.status(404).json({ message: "Post not found" });
+    if (req.body.quote) findQuote.quote = req.body.quote;
+    if (req.body.author) findQuote.person = req.body.author || "Unknown";
+    res.json(findQuote);
+});
+app.delete("/quotes/:id", (req, res) => {
+    const index = quotes.findIndex((q) => q.id === parseInt(req.params.id));
+    if (index !== -1) {
+        quotes.splice(index, 1);
+        res.status(201).json({ message: `Quote with id ${req.params.id} deleted` });
+    } else res.status(404).json({ message: `No quote with id ${req.params.id}` });
 });
 
-app.post('/quotes', (req, res) => {
-    if(!req.body.quote || !req.body.author){
-        return res.status(400).json({message: "Quote and author are required"});
+// FRONTEND ROUTES
+app.get("/", async (req, res) => {
+    try {
+        const response = await axios.get(`${API_URL}/quotes`);
+        const quotes = response.data;
+        const ranPage = Math.floor(Math.random() * 10) + 1;
+        const imgRes = await axios.get(`https://api.pexels.com/v1/search?query=nature&per_page=${quotes.length}&page=${ranPage}`, {
+            headers: { Authorization: key },
+        });
+        const images = imgRes.data.photos;
+        const quoteWithImg = quotes.map((quote, index) => ({
+            ...quote,
+            imageUrl: images[index] ? images[index].src.medium : null,
+        }));
+        res.render("index.ejs", { quotes: quoteWithImg });
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching quotes" });
     }
-    
-    const newId = lastId + 1;
-    const quote = {
-        id: newId,
-        quote: req.body.quote,
-        person: req.body.author
+});
+app.get("/new", (req, res) => res.render("editPage.ejs"));
+app.get("/edit/:id", async (req, res) => {
+    try {
+        const quoteData = await axios.get(`${API_URL}/quotes/${req.params.id}`);
+        res.render("editPage.ejs", { quote: quoteData.data });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
-
-    lastId = newId;
-    quotes.push(quote)
-    res.json(quote);
-})
-
-app.patch('/quotes/:id', (req,res) => {
-    const findQuote = quotes.find((q) => q.id === parseInt(req.params.id));
-
-    if(!findQuote) return res.status(404).json({message: "Post not found"});
-
-    if(req.body.quote) findQuote.quote = req.body.quote;
-    if(req.body.author) findQuote.person = req.body.author;
-    if(req.body.author === "") findQuote.person = "Unknown";
-
-    res.json(findQuote);
-
-})
-
-app.delete('/quotes/:id', (req, res) => {
-    const findQuote = quotes.findIndex((q) => q.id === parseInt(req.params.id));
-    if(findQuote !== -1){
-        quotes.splice(findQuote, 1);
-        res.status(201).json({message: `Quote at id ${req.params.id} is successfully deleted`});
+});
+app.post("/api/quotes", async (req, res) => {
+    try {
+        await axios.post(`${API_URL}/quotes`, req.body);
+        res.redirect("/");
+    } catch (error) {
+        res.status(500).json({ message: "Error posting the new quote" });
     }
-    else{
-        console.log(`There is no quote with id ${req.params.id}`);
-        res.status(404).json({message: `There is no quote with id ${req.params.id}`});
-    } 
-})
+});
+app.post("/api/quotes/:id", async (req, res) => {
+    try {
+        await axios.patch(`${API_URL}/quotes/${req.params.id}`, req.body);
+        res.redirect("/");
+    } catch (error) {
+        res.status(500).json({ message: "Error updating the quote" });
+    }
+});
+app.get("/api/quotes/delete/:id", async (req, res) => {
+    try {
+        await axios.delete(`${API_URL}/quotes/${req.params.id}`);
+        res.redirect("/");
+    } catch (error) {
+        res.status(500).json({ message: "Error deleting the quote" });
+    }
+});
 
-app.listen(port, () => {
-    console.log(`API is running on port ${port}`);
-})
+// Start server
+app.listen(port, () => console.log(`Server running on port ${port}`));
